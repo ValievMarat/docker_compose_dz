@@ -1,0 +1,53 @@
+version: "3.9"
+
+volumes:
+  pgdata:
+
+networks:
+  backend:
+
+services:
+  postgres:
+    image: postgres:alpine
+    environment:
+      - POSTGRES_DB=netology_stocks_products
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD_SHELL", "pg_isready -U postgres -d netology_stocks_products"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    volumes:
+      - ./log:/var/log
+      - .:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    env_file:
+      - .env
+
+  app_stocks_products:
+    build: .
+    depends_on:
+      - postgres
+    networks:
+      - backend
+    ports:
+      - "8000:8000"
+
+  nginx:
+    image: nginx:latest
+    networks:
+      - backend
+    ports:
+      - "7878:80"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - ./static:/src/static
+    depends_on:
+      - app_stocks_products
+
+
